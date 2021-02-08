@@ -1,32 +1,60 @@
-/**
- * First we will load all of this project's JavaScript dependencies which
- * includes Vue and other libraries. It is a great starting point when
- * building robust, powerful web applications using Vue and Laravel.
- */
+// require('./bootstrap');
 
-require('./bootstrap');
+import Vue from "vue";
+import Vuelidate from 'vuelidate'
+import router from "./router";
+import store from "./store";
+import App from "./views/App";
+import axios from 'axios'
 
-window.Vue = require('vue').default;
+// If you don't need the styles, do not connect
+// import 'sweetalert2/dist/sweetalert2.min.css';
 
-/**
- * The following block of code may be used to automatically register your
- * Vue components. It will recursively scan this directory for the Vue
- * components and automatically register them with their "basename".
- *
- * Eg. ./components/ExampleComponent.vue -> <example-component></example-component>
- */
 
-// const files = require.context('./', true, /\.vue$/i)
-// files.keys().map(key => Vue.component(key.split('/').pop().split('.')[0], files(key).default))
+Vue.use(Vuelidate)
+Vue.component('Navbar', require('./components/partials/Navbar').default);
+Vue.component('Aside', require('./components/partials/Aside').default);
+Vue.component('Dashboard', require('./views/Dashboard').default);
 
-Vue.component('example-component', require('./components/ExampleComponent.vue').default);
+// interceptor token
+axios.interceptors.request.use( (config) => {
+    let token = store.state.token || null
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config;
+}, function (error) {
+    return Promise.reject(error);
+});
 
-/**
- * Next, we will create a fresh Vue application instance and attach it to
- * the page. Then, you may begin adding components to this application
- * or customize the JavaScript scaffolding to fit your unique needs.
- */
+router.beforeEach((to, from, next) => {
+    if (to.matched.some(record => record.meta.requiresAuth)) {
+        if (!store.getters.loggedIn) {
+            next({
+                name: 'login',
+            })
+        } else {
+            next()
+        }
+    } else if (to.matched.some(record => record.meta.requiresOffAuth)){
+        if (store.getters.loggedIn) {
+            next({
+                name: 'dashboard.index',
+            })
+        } else {
+            next()
+        }
+    } else {
+        next()
+    }
+})
 
 const app = new Vue({
     el: '#app',
+    components: {
+        App
+    },
+    router,
+    store,
+    axios
 });
